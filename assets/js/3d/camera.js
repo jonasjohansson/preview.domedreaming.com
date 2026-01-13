@@ -23,68 +23,44 @@ export function setQeRotationSpeed(value) {
 }
 
 export function setupCameraControls() {
-  // Pointer lock
-  function requestPointerLock() {
-    const request = canvas.requestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock;
-    if (request) request.call(canvas);
-  }
+  // Click and drag camera rotation
+  let isDragging = false;
+  let lastMouseX = 0;
+  let lastMouseY = 0;
 
-  function onPointerLockChange() {
-    const wasLocked = isPointerLocked;
-    isPointerLocked =
-      document.pointerLockElement === canvas || document.mozPointerLockElement === canvas || document.webkitPointerLockElement === canvas;
-
-    if (!wasLocked && isPointerLocked && modelLoaded) {
-      euler.setFromQuaternion(camera.quaternion);
-    }
-  }
-
-  document.addEventListener("pointerlockchange", onPointerLockChange);
-  document.addEventListener("mozpointerlockchange", onPointerLockChange);
-  document.addEventListener("webkitpointerlockchange", onPointerLockChange);
-
-  // Request pointer lock on canvas click
-  canvas.addEventListener("click", () => {
-    if (!isPointerLocked) {
-      requestPointerLock();
-    }
+  canvas.addEventListener("mousedown", (event) => {
+    if (!modelLoaded) return;
+    isDragging = true;
+    lastMouseX = event.clientX;
+    lastMouseY = event.clientY;
+    euler.setFromQuaternion(camera.quaternion);
+    canvas.style.cursor = "grabbing";
   });
 
-  // Mouse movement with pointer lock - only when Cmd (Mac) or Ctrl (Windows/Linux) is held
-  // Track modifier key state separately since pointer lock events don't always have key info
-  let isModifierPressed = false;
-  
-  window.addEventListener('keydown', (e) => {
-    // Check if the key being pressed is Meta (Cmd) or Control
-    if (e.key === 'Meta' || e.key === 'Control' || e.metaKey || e.ctrlKey) {
-      isModifierPressed = true;
-    }
-  });
-  
-  window.addEventListener('keyup', (e) => {
-    // Check if the key being released is Meta (Cmd) or Control
-    if (e.key === 'Meta' || e.key === 'Control') {
-      isModifierPressed = false;
-    }
-  });
-  
-  // Also check modifier state on mousemove as a fallback
-  function onMouseMove(event) {
-    if (!isPointerLocked || !modelLoaded) return;
-    // Only apply camera rotation when Cmd (Meta) or Ctrl is held
-    // Check both our tracked state and the event itself as fallback
-    if (!isModifierPressed && !event.metaKey && !event.ctrlKey) return;
+  canvas.addEventListener("mousemove", (event) => {
+    if (!isDragging || !modelLoaded) return;
     
-    const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-    const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+    const deltaX = event.clientX - lastMouseX;
+    const deltaY = event.clientY - lastMouseY;
 
-    euler.y -= movementX * cameraSettings.sensitivity;
-    euler.x -= movementY * cameraSettings.sensitivity;
+    euler.y -= deltaX * cameraSettings.sensitivity;
+    euler.x -= deltaY * cameraSettings.sensitivity;
     euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
     camera.quaternion.setFromEuler(euler);
-  }
 
-  canvas.addEventListener("mousemove", onMouseMove);
+    lastMouseX = event.clientX;
+    lastMouseY = event.clientY;
+  });
+
+  canvas.addEventListener("mouseup", () => {
+    isDragging = false;
+    canvas.style.cursor = "default";
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    isDragging = false;
+    canvas.style.cursor = "default";
+  });
 
   // Touch controls - only active when in dome mode
   // Track touches: single touch = camera rotation, two touches = move forward

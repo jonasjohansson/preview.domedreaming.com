@@ -4,6 +4,7 @@ import GUI from 'lil-gui';
 let gui = null;
 let videoControllers = null;
 let cameraController = null;
+let colorControllers = {};
 let loadImage, loadVideo, connectWebcam, disconnectWebcam, getCurrentVideo;
 let touchMovement;
 let fileInput = null;
@@ -144,7 +145,7 @@ export function initGUI(modules) {
         'D - Move Right\n' +
         'Q - Rotate Left\n' +
         'E - Rotate Right\n\n' +
-        'Click canvas - Lock pointer for mouse look'
+        'Click and Drag - Rotate camera'
       );
     }
   };
@@ -155,6 +156,75 @@ export function initGUI(modules) {
 
   // Start video update loop
   startVideoUpdateLoop();
+  
+  // Setup color controls after model loads
+  setupColorControls();
+}
+
+async function setupColorControls() {
+  // Wait for model to load
+  const checkModel = async () => {
+    try {
+      const modelModule = await import("../3d/model.js");
+      if (modelModule.fbxMeshes && modelModule.fbxMeshes.length > 0) {
+        const { getMaterial, colorToHex } = await import("../3d/utils.js");
+        
+        // Initialize savedColorSettings if needed
+        if (!window.savedColorSettings) {
+          window.savedColorSettings = {};
+        }
+        
+        // Create color controls for each mesh
+        modelModule.fbxMeshes.forEach((item) => {
+          const material = getMaterial(item.mesh);
+          if (material && material.color) {
+            // Get current color (from saved settings or material)
+            let currentColor;
+            if (window.savedColorSettings[item.name]) {
+              const saved = window.savedColorSettings[item.name];
+              currentColor = `#${Math.floor(saved.r * 255).toString(16).padStart(2, "0")}${Math.floor(saved.g * 255).toString(16).padStart(2, "0")}${Math.floor(saved.b * 255).toString(16).padStart(2, "0")}`;
+            } else {
+              currentColor = colorToHex(material.color);
+            }
+            
+            // Create color object for this mesh
+            const colorObj = { color: currentColor };
+            
+            // Add color controller
+            const controller = gui.addColor(colorObj, 'color').name(item.name);
+            controller.onChange((value) => {
+              // Convert hex to RGB (0-1)
+              const hex = value.replace('#', '');
+              const r = parseInt(hex.substring(0, 2), 16) / 255;
+              const g = parseInt(hex.substring(2, 4), 16) / 255;
+              const b = parseInt(hex.substring(4, 6), 16) / 255;
+              
+              // Update material
+              material.color.setRGB(r, g, b);
+              material.needsUpdate = true;
+              
+              // Save to settings
+              window.savedColorSettings[item.name] = { r, g, b };
+              
+              // Save to localStorage
+              import("../core/settings.js").then((settingsModule) => {
+                settingsModule.saveSettings(modelModule.fbxMeshes, modelModule.glbLights);
+              });
+            });
+            
+            colorControllers[item.name] = controller;
+          }
+        });
+      } else {
+        // Model not loaded yet, try again
+        setTimeout(checkModel, 500);
+      }
+    } catch (error) {
+      console.warn("Error setting up color controls:", error);
+    }
+  };
+  
+  checkModel();
 }
 
 function setupKeyboardHandlers() {
