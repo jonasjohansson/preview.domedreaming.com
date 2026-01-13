@@ -17,10 +17,6 @@ export let bloomSettings = {
 export let screenSettings = {
   defaultImage: "assets/media/background.jpg",
 };
-export let textureRotationSettings = {
-  enabled: true,
-  speed: 0.02,
-};
 
 export function setMoveSpeed(value) {
   moveSpeed = value;
@@ -50,7 +46,6 @@ async function loadDefaultSettings() {
       if (settings.startCameraRotation) Object.assign(startCameraRotation, settings.startCameraRotation);
       if (settings.bloomSettings) Object.assign(bloomSettings, settings.bloomSettings);
       if (settings.screenSettings) Object.assign(screenSettings, settings.screenSettings);
-      if (settings.textureRotationSettings) Object.assign(textureRotationSettings, settings.textureRotationSettings);
       
       if (settings.colorSettings) {
         window.savedColorSettings = settings.colorSettings;
@@ -80,7 +75,6 @@ export async function loadSettings() {
       // if (settings.cameraSettings) Object.assign(cameraSettings, settings.cameraSettings);
       if (settings.bloomSettings) Object.assign(bloomSettings, settings.bloomSettings);
       if (settings.screenSettings) Object.assign(screenSettings, settings.screenSettings);
-      if (settings.textureRotationSettings) Object.assign(textureRotationSettings, settings.textureRotationSettings);
       if (settings.colorSettings) window.savedColorSettings = settings.colorSettings;
       if (settings.lightSettings) window.savedLightSettings = settings.lightSettings;
     }
@@ -169,7 +163,6 @@ export function saveSettings(fbxMeshes, glbLights) {
           lightSettings,
           bloomSettings,
           screenSettings,
-          textureRotationSettings,
         };
 
         localStorage.setItem("domeDreamingSettings", JSON.stringify(settings));
@@ -183,7 +176,6 @@ export function saveSettings(fbxMeshes, glbLights) {
         startCameraRotation,
         bloomSettings,
         screenSettings,
-        textureRotationSettings,
       };
       localStorage.setItem("domeDreamingSettings", JSON.stringify(settings));
     }

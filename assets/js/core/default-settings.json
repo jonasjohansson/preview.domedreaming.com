@@ -21,10 +21,6 @@
     "screenSettings": {
       "defaultImage": "assets/media/background.jpg"
     },
-    "textureRotationSettings": {
-      "enabled": true,
-      "speed": 0.02
-    },
     "cameraSettings": {
       "sensitivity": 0.002,
       "rotationSpeed": 120

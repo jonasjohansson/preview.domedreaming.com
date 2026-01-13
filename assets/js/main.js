@@ -25,7 +25,6 @@ import {
   startCameraPosition,
   startCameraRotation,
   saveSettings,
-  textureRotationSettings,
 } from "./core/settings.js";
 import { updateViewportHeightCSS } from "./core/utils.js";
 import * as THREE from "three";
@@ -211,7 +210,6 @@ function animate(currentTime) {
     lastCameraSaveTime = currentTime;
   }
 
-  updateTextureRotation(deltaTime);
   if (updateScreenLighting) {
     updateScreenLighting(currentTime);
   }
@@ -219,29 +217,6 @@ function animate(currentTime) {
   updatePostProcessing();
 }
 
-function updateTextureRotation(deltaTime) {
-  if (!textureRotationSettings.enabled) return;
-
-  const imageTexture = getCurrentImageTexture ? getCurrentImageTexture() : null;
-  const videoTexture = getCurrentVideoTexture ? getCurrentVideoTexture() : null;
-  const texture = imageTexture || videoTexture;
-
-  if (texture) {
-    if (!texture.center || texture.center.x !== 0.5 || texture.center.y !== 0.5) {
-      if (!texture.center) {
-        texture.center = new THREE.Vector2(0.5, 0.5);
-      } else {
-        texture.center.set(0.5, 0.5);
-      }
-    }
-
-    texture.rotation -= textureRotationSettings.speed * deltaTime;
-
-    while (texture.rotation < 0) {
-      texture.rotation += Math.PI * 2;
-    }
-  }
-}
 
 function startRenderLoop() {
   lastTime = performance.now();
