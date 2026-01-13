@@ -87,6 +87,10 @@ export function initGUI(modules) {
   cameraController.onChange(() => {
     updateCameraButton();
   });
+  
+  // Help and Credits buttons
+  gui.add({ showHelp: () => showHelpAlert() }, 'showHelp').name('❓ Help');
+  gui.add({ showCredits: () => showCreditsAlert() }, 'showCredits').name('ℹ️ Credits');
 
   // Video controls at root (hidden by default)
   const playController = gui.add(controls, 'videoPlaying').name('⏸️ Play/Pause').listen();
@@ -144,6 +148,42 @@ export function initGUI(modules) {
   
   // Setup color controls after model loads
   setupColorControls();
+}
+
+// Show help alert
+export function showHelpAlert() {
+  const helpText = `How to use the Fulldome Visualiser:
+
+Movement:
+- WASD: Move camera (W=forward, S=backward, A=left, D=right)
+- Q/E: Rotate camera left/right
+- Click and drag: Look around
+
+Media:
+- Upload images or videos using the "Upload" button
+- Connect your webcam using the "Connect Camera" button
+- Use video controls to play, pause, scrub, loop, and adjust volume
+
+Colors:
+- Adjust colors of 3D objects using the color pickers
+
+Keyboard shortcuts:
+- U: Upload image/video
+- C: Connect/disconnect camera`;
+
+  alert(helpText);
+}
+
+// Show credits alert
+export function showCreditsAlert() {
+  const creditsText = `Credits:
+
+3D model by Ashley Reed
+Original dome visualiser by Per-Olov Jernberg
+Design and development by Jonas Johansson
+Background by Paul Bourke`;
+
+  alert(creditsText);
 }
 
 async function setupColorControls() {

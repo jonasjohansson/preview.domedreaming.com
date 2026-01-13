@@ -37,3 +37,7 @@ canvas {
   object-fit: cover;
   pointer-events: auto;
 }
+
+#loading-overlay {
+  display: none;
+}

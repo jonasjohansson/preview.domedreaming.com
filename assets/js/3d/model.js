@@ -228,20 +228,11 @@ export function loadModel() {
       
       // Function to show the scene once everything is loaded
       function showScene() {
-        // Fade out the overlay
+        // Hide loading overlay if it exists
         const loadingOverlay = document.getElementById("loading-overlay");
         if (loadingOverlay) {
-          loadingOverlay.classList.add("fade-out");
-          // Remove from DOM after fade completes
-          setTimeout(() => {
-            loadingOverlay.remove();
-          }, 500);
+          loadingOverlay.style.display = 'none';
         }
-        
-        const canvasContainer = document.getElementById("canvas-container");
-        const infoPanel = document.getElementById("info-panel");
-        if (canvasContainer) canvasContainer.classList.add("loaded");
-        if (infoPanel) infoPanel.classList.add("loaded");
       }
       
       // Wait for all assets to load before showing the scene
@@ -276,7 +267,13 @@ export function loadModel() {
         setTimeout(showScene, 1000);
       });
     },
-    undefined,
+    (progress) => {
+      // Loading progress callback - can be used for progress bar if needed
+      if (progress.lengthComputable) {
+        const percentComplete = (progress.loaded / progress.total) * 100;
+        // Progress tracking can be added here if needed
+      }
+    },
     (error) => {
       console.error("Error loading 3D model:", error);
       const loadingOverlay = document.getElementById("loading-overlay");

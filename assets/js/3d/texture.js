@@ -135,7 +135,6 @@ export function loadVideo(file) {
       currentImageTexture = null;
     }
 
-    textureRotationSettings.enabled = false;
     const videoTexture = new THREE.VideoTexture(video);
     configureTexture(videoTexture);
     videoTexture.minFilter = THREE.LinearFilter;
@@ -187,7 +186,6 @@ export function connectWebcam() {
         currentWebcamStream = null;
       }
 
-      textureRotationSettings.enabled = false;
       const video = document.createElement("video");
       video.srcObject = stream;
       video.autoplay = true;
