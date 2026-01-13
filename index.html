@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0" />
+    <title>Dome Dreaming - 3D Preview</title>
+    <meta
+      name="description"
+      content="3D Dome Preview Visualizer" />
+
+    <!-- Theme Color -->
+    <meta
+      name="theme-color"
+      content="#000000" />
+
+    <!-- Resource Hints -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+
+    <!-- Load CSS -->
+    <link
+      rel="stylesheet"
+      href="assets/css/main.css" />
+
+    <!-- Prefetch 3D model (low priority, load after page is interactive) -->
+    <link
+      rel="prefetch"
+      href="assets/models/wisdome.glb"
+      as="fetch"
+      crossorigin="anonymous" />
+
+    <!-- Import map must come before modulepreload and module scripts -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.182.0/examples/jsm/",
+          "@recast-navigation/core": "https://cdn.jsdelivr.net/npm/@recast-navigation/core@0.43.0/dist/index.mjs",
+          "@recast-navigation/wasm": "https://cdn.jsdelivr.net/npm/@recast-navigation/wasm@0.43.0/dist/recast-navigation.wasm-compat.js",
+          "@recast-navigation/generators": "https://cdn.jsdelivr.net/npm/@recast-navigation/generators@0.43.0/dist/index.mjs",
+          "@recast-navigation/three": "https://cdn.jsdelivr.net/npm/@recast-navigation/three@0.43.0/dist/index.mjs",
+          "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.21/+esm"
+        }
+      }
+    </script>
+
+    <!-- Preload critical JavaScript modules -->
+    <link
+      rel="modulepreload"
+      href="assets/js/main.js" />
+    <link
+      rel="modulepreload"
+      href="assets/js/3d/scene.js" />
+    <link
+      rel="modulepreload"
+      href="assets/js/core/settings.js" />
+    <link
+      rel="modulepreload"
+      href="assets/js/3d/model.js" />
+  </head>
+  <body>
+    <div id="loading-overlay"></div>
+    <main class="grid">
+      <section class="page-section grid">
+        <div id="canvas-container">
+          <div id="drop-zone"></div>
+        </div>
+      </section>
+    </main>
+    
+    <script type="module" src="assets/js/main.js"></script>
+  </body>
+</html>

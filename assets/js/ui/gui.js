@@ -1,0 +1,267 @@
+// GUI Controller Module using lil-gui
+import GUI from 'lil-gui';
+
+let gui = null;
+let videoControllers = null;
+let cameraController = null;
+let loadImage, loadVideo, connectWebcam, disconnectWebcam, getCurrentVideo;
+let touchMovement;
+let fileInput = null;
+let videoUpdateInterval = null;
+let isCameraConnected = false;
+
+// Control objects
+const controls = {
+  // Media controls
+  upload: () => {
+    if (!fileInput) {
+      fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = "image/*,video/*";
+      fileInput.style.display = "none";
+      document.body.appendChild(fileInput);
+
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          if (file.type.startsWith("image/")) {
+            loadImage(file);
+            hideVideoControls();
+          } else if (file.type.startsWith("video/")) {
+            loadVideo(file);
+            setTimeout(() => {
+              setupVideoControls();
+            }, 500);
+          }
+        }
+        fileInput.value = "";
+      });
+    }
+    fileInput.click();
+  },
+  camera: () => {
+    if (isCameraConnected) {
+      if (disconnectWebcam) {
+        disconnectWebcam();
+        isCameraConnected = false;
+        updateCameraButton();
+        hideVideoControls();
+      }
+    } else {
+      if (connectWebcam) {
+        connectWebcam().then(() => {
+          isCameraConnected = true;
+          updateCameraButton();
+          hideVideoControls();
+        }).catch(() => {
+          isCameraConnected = false;
+          updateCameraButton();
+        });
+      }
+    }
+  },
+  
+  // Video controls
+  videoPlaying: false,
+  videoTime: 0,
+  videoLoop: true,
+  videoVolume: 0,
+};
+
+export function initGUI(modules) {
+  // Get functions from modules
+  loadImage = modules.loadImage;
+  loadVideo = modules.loadVideo;
+  connectWebcam = modules.connectWebcam;
+  disconnectWebcam = modules.disconnectWebcam;
+  getCurrentVideo = modules.getCurrentVideo;
+  touchMovement = modules.touchMovement;
+
+  // Create GUI
+  gui = new GUI({ title: 'Fulldome Visualiser', width: 280 });
+
+  // Media controls at root
+  gui.add(controls, 'upload').name('📁 Upload Image/Video');
+  cameraController = gui.add(controls, 'camera').name('📷 Connect Camera');
+  cameraController.onChange(() => {
+    updateCameraButton();
+  });
+
+  // Video controls at root (hidden by default)
+  const playController = gui.add(controls, 'videoPlaying').name('⏸️ Play/Pause').listen();
+  playController.onChange((playing) => {
+    const video = getCurrentVideo ? getCurrentVideo() : null;
+    if (video) {
+      if (playing) {
+        video.play();
+      } else {
+        video.pause();
+      }
+    }
+  });
+  
+  const timeController = gui.add(controls, 'videoTime', 0, 100).name('Time').step(0.1).listen();
+  timeController.onChange((value) => {
+    const video = getCurrentVideo ? getCurrentVideo() : null;
+    if (video && video.duration) {
+      video.currentTime = (value / 100) * video.duration;
+    }
+  });
+  
+  const loopController = gui.add(controls, 'videoLoop').name('Loop').onChange((loop) => {
+    const video = getCurrentVideo ? getCurrentVideo() : null;
+    if (video) {
+      video.loop = loop;
+    }
+  });
+  
+  const volumeController = gui.add(controls, 'videoVolume', 0, 100).name('Volume').step(1).onChange((volume) => {
+    const video = getCurrentVideo ? getCurrentVideo() : null;
+    if (video) {
+      video.volume = volume / 100;
+      video.muted = volume === 0;
+    }
+  });
+  
+  // Store video controllers for show/hide
+  videoControllers = {
+    playPause: playController,
+    time: timeController,
+    loop: loopController,
+    volume: volumeController,
+  };
+  
+  // Hide video controls initially
+  Object.values(videoControllers).forEach(controller => controller.hide());
+
+  // Help button at the bottom
+  const controlsInfo = {
+    help: () => {
+      alert('Controls:\n\n' +
+        'W - Move Forward\n' +
+        'S - Move Backward\n' +
+        'A - Move Left\n' +
+        'D - Move Right\n' +
+        'Q - Rotate Left\n' +
+        'E - Rotate Right\n\n' +
+        'Click canvas - Lock pointer for mouse look'
+      );
+    }
+  };
+  gui.add(controlsInfo, 'help').name('📖 Help');
+
+  // Setup keyboard handlers for movement
+  setupKeyboardHandlers();
+
+  // Start video update loop
+  startVideoUpdateLoop();
+}
+
+function setupKeyboardHandlers() {
+  window.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+    if (touchMovement) {
+      setMovementKey(key, true);
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    const key = e.key.toLowerCase();
+    if (touchMovement) {
+      setMovementKey(key, false);
+    }
+  });
+}
+
+function setMovementKey(key, active) {
+  if (!touchMovement) return;
+  
+  const keyLower = key.toLowerCase();
+  switch (keyLower) {
+    case "w":
+      touchMovement.forward = active;
+      break;
+    case "s":
+      touchMovement.backward = active;
+      break;
+    case "a":
+      touchMovement.left = active;
+      break;
+    case "d":
+      touchMovement.right = active;
+      break;
+    case "q":
+      touchMovement.rotateLeft = active;
+      break;
+    case "e":
+      touchMovement.rotateRight = active;
+      break;
+  }
+}
+
+
+function setupVideoControls() {
+  const video = getCurrentVideo ? getCurrentVideo() : null;
+  
+  if (video && videoControllers) {
+    // Show video controls
+    Object.values(videoControllers).forEach(controller => controller.show());
+    
+    // Setup initial values
+    controls.videoLoop = video.loop;
+    controls.videoVolume = Math.round(video.volume * 100);
+    controls.videoPlaying = !video.paused;
+    
+    // Update controllers
+    videoControllers.loop.setValue(video.loop);
+    videoControllers.volume.setValue(Math.round(video.volume * 100));
+    videoControllers.playPause.setValue(!video.paused);
+    
+    // Listen for video events
+    const playHandler = () => {
+      controls.videoPlaying = true;
+      videoControllers.playPause.updateDisplay();
+    };
+    
+    const pauseHandler = () => {
+      controls.videoPlaying = false;
+      videoControllers.playPause.updateDisplay();
+    };
+    
+    video.addEventListener("play", playHandler);
+    video.addEventListener("pause", pauseHandler);
+    video.addEventListener("ended", pauseHandler);
+  }
+}
+
+function hideVideoControls() {
+  if (videoControllers) {
+    Object.values(videoControllers).forEach(controller => controller.hide());
+  }
+}
+
+function startVideoUpdateLoop() {
+  if (videoUpdateInterval) {
+    clearInterval(videoUpdateInterval);
+  }
+  
+  videoUpdateInterval = setInterval(() => {
+    const video = getCurrentVideo ? getCurrentVideo() : null;
+    if (video && videoControllers && !videoControllers.time._hidden) {
+      if (video.duration) {
+        controls.videoTime = (video.currentTime / video.duration) * 100;
+        videoControllers.time.updateDisplay();
+      }
+    }
+  }, 100);
+}
+
+function updateCameraButton() {
+  if (cameraController) {
+    cameraController.name(isCameraConnected ? '🔌 Disconnect Camera' : '📷 Connect Camera');
+  }
+}
+
+// Make functions available globally for texture.js
+window.setupVideoControls = setupVideoControls;
+window.hideVideoControls = hideVideoControls;
