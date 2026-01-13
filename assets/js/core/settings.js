@@ -48,7 +48,17 @@ async function loadDefaultSettings() {
       if (settings.screenSettings) Object.assign(screenSettings, settings.screenSettings);
       
       if (settings.colorSettings) {
-        window.savedColorSettings = settings.colorSettings;
+        // Initialize if not exists, then assign defaults
+        if (!window.savedColorSettings) {
+          window.savedColorSettings = {};
+        }
+        // Assign default colors
+        window.savedColorSettings = { ...window.savedColorSettings, ...settings.colorSettings };
+      } else {
+        // Initialize even if no colorSettings in JSON
+        if (!window.savedColorSettings) {
+          window.savedColorSettings = {};
+        }
       }
       if (settings.lightSettings) {
         window.savedLightSettings = settings.lightSettings;
@@ -65,27 +75,17 @@ async function loadDefaultSettings() {
 export async function loadSettings() {
   await loadDefaultSettings();
   
-  // Try localStorage as fallback (but don't override defaults for moveSpeed and cameraSettings)
-  try {
-    const saved = localStorage.getItem("domeDreamingSettings");
-    if (saved) {
-      const settings = JSON.parse(saved);
-      // Don't override moveSpeed and cameraSettings from localStorage - use defaults
-      // if (settings.moveSpeed !== undefined) moveSpeed = settings.moveSpeed;
-      // if (settings.cameraSettings) Object.assign(cameraSettings, settings.cameraSettings);
-      if (settings.bloomSettings) Object.assign(bloomSettings, settings.bloomSettings);
-      if (settings.screenSettings) Object.assign(screenSettings, settings.screenSettings);
-      if (settings.colorSettings) window.savedColorSettings = settings.colorSettings;
-      if (settings.lightSettings) window.savedLightSettings = settings.lightSettings;
-    }
-  } catch (error) {
-    console.warn("Failed to load settings from localStorage:", error);
+  // Ensure savedColorSettings is initialized from defaults
+  if (!window.savedColorSettings) {
+    window.savedColorSettings = {};
   }
 }
 
 export async function applySettingsToScene() {
-  if (!window.savedColorSettings) {
-    window.savedColorSettings = {};
+  // Ensure savedColorSettings exists and has default colors
+  if (!window.savedColorSettings || Object.keys(window.savedColorSettings).length === 0) {
+    // Reload defaults if colors are missing
+    await loadDefaultSettings();
   }
 
   const modelModule = await import("../3d/model.js");
@@ -93,10 +93,13 @@ export async function applySettingsToScene() {
     const { getMaterial } = await import("../3d/utils.js");
     modelModule.fbxMeshes.forEach((item) => {
       const material = getMaterial(item.mesh);
-      if (material && window.savedColorSettings[item.name]) {
-        const color = window.savedColorSettings[item.name];
-        material.color.setRGB(color.r, color.g, color.b);
-        material.needsUpdate = true;
+      if (material) {
+        // Apply color if it exists in savedColorSettings
+        if (window.savedColorSettings && window.savedColorSettings[item.name]) {
+          const color = window.savedColorSettings[item.name];
+          material.color.setRGB(color.r, color.g, color.b);
+          material.needsUpdate = true;
+        }
       }
     });
   }
@@ -124,62 +127,4 @@ export async function applySettingsToScene() {
   }
 }
 
-export function saveSettings(fbxMeshes, glbLights) {
-  try {
-    const colorSettings = {};
-    if (fbxMeshes && Array.isArray(fbxMeshes)) {
-      import("../3d/utils.js").then((utils) => {
-        fbxMeshes.forEach((item) => {
-          const material = utils.getMaterial(item.mesh);
-          if (material?.color) {
-            const meshName = item.name || `mesh_${fbxMeshes.indexOf(item)}`;
-            colorSettings[meshName] = {
-              r: material.color.r,
-              g: material.color.g,
-              b: material.color.b,
-            };
-          }
-        });
-        
-        const lightSettings = {};
-        if (glbLights && Array.isArray(glbLights)) {
-          glbLights.forEach((light, index) => {
-            const lightName = light.name || `light_${index}`;
-            lightSettings[lightName] = {
-              r: light.color.r,
-              g: light.color.g,
-              b: light.color.b,
-              intensity: light.intensity,
-            };
-          });
-        }
-
-        const settings = {
-          moveSpeed,
-          cameraSettings,
-          startCameraPosition,
-          startCameraRotation,
-          colorSettings,
-          lightSettings,
-          bloomSettings,
-          screenSettings,
-        };
-
-        localStorage.setItem("domeDreamingSettings", JSON.stringify(settings));
-      });
-    } else {
-      // Save without color settings if meshes not available
-      const settings = {
-        moveSpeed,
-        cameraSettings,
-        startCameraPosition,
-        startCameraRotation,
-        bloomSettings,
-        screenSettings,
-      };
-      localStorage.setItem("domeDreamingSettings", JSON.stringify(settings));
-    }
-  } catch (error) {
-    console.warn("Failed to save settings:", error);
-  }
-}
+// Removed saveSettings - no localStorage persistence

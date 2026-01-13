@@ -206,10 +206,7 @@ async function setupColorControls() {
               // Save to settings
               window.savedColorSettings[item.name] = { r, g, b };
               
-              // Save to localStorage
-              import("../core/settings.js").then((settingsModule) => {
-                settingsModule.saveSettings(modelModule.fbxMeshes, modelModule.glbLights);
-              });
+              // Colors are updated in memory only (no persistence)
             });
             
             colorControllers[item.name] = controller;

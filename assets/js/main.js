@@ -24,9 +24,7 @@ import {
   currentCameraRotation,
   startCameraPosition,
   startCameraRotation,
-  saveSettings,
 } from "./core/settings.js";
-import { updateViewportHeightCSS } from "./core/utils.js";
 import * as THREE from "three";
 
 let animationFrameId = null;
@@ -78,7 +76,6 @@ async function load3DModules() {
 async function init() {
   // Load settings
   await loadSettings();
-  updateViewportHeightCSS();
 
   // Setup 3D scene
   setupLighting();
@@ -152,7 +149,6 @@ function setupEventListeners() {
 
   // Handle resize
   const handleResize = () => {
-    updateViewportHeightCSS();
   };
   window.addEventListener("resize", handleResize);
 
@@ -200,13 +196,11 @@ function animate(currentTime) {
   currentCameraRotation.y = camera.rotation.y;
   currentCameraRotation.z = camera.rotation.z;
 
+  // Update camera position tracking (no persistence)
   const timeSinceLastSave = currentTime - lastCameraSaveTime;
   if (timeSinceLastSave >= CAMERA_SAVE_INTERVAL) {
     Object.assign(startCameraPosition, currentCameraPosition);
     Object.assign(startCameraRotation, currentCameraRotation);
-    if (fbxMeshes && glbLights) {
-      saveSettings(fbxMeshes, glbLights);
-    }
     lastCameraSaveTime = currentTime;
   }
 

@@ -153,6 +153,16 @@ export function loadModel() {
               material.needsUpdate = true;
             }
 
+            // Apply color from savedColorSettings if available (after material setup)
+            if (window.savedColorSettings && window.savedColorSettings[child.name]) {
+              const color = window.savedColorSettings[child.name];
+              material = getMaterial(child); // Get the current material (might have been converted)
+              if (material) {
+                material.color.setRGB(color.r, color.g, color.b);
+                material.needsUpdate = true;
+              }
+            }
+            
             fbxMeshes.push({
               mesh: child,
               name: child.name || "Unnamed",
