@@ -150,6 +150,127 @@ export function initGUI(modules) {
   setupColorControls();
 }
 
+// Custom modal function for displaying HTML content with links
+function showCustomModal(title, htmlContent) {
+  // Remove existing modal if any
+  const existingModal = document.getElementById('custom-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  // Create modal overlay
+  const modal = document.createElement('div');
+  modal.id = 'custom-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  `;
+
+  // Create modal content
+  const modalContent = document.createElement('div');
+  modalContent.style.cssText = `
+    background-color: #1a1a1a;
+    color: #ffffff;
+    padding: 24px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  `;
+
+  // Create title
+  const titleEl = document.createElement('h2');
+  titleEl.textContent = title;
+  titleEl.style.cssText = `
+    margin: 0 0 16px 0;
+    font-size: 20px;
+    font-weight: 600;
+  `;
+
+  // Create content
+  const contentEl = document.createElement('div');
+  contentEl.innerHTML = htmlContent;
+  contentEl.style.cssText = `
+    font-size: 14px;
+    line-height: 1.6;
+  `;
+
+  // Style links
+  const style = document.createElement('style');
+  style.textContent = `
+    #custom-modal a {
+      color: #4a9eff;
+      text-decoration: none;
+    }
+    #custom-modal a:hover {
+      text-decoration: underline;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Create close button
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Close';
+  closeBtn.style.cssText = `
+    margin-top: 20px;
+    padding: 8px 16px;
+    background-color: #4a9eff;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+  `;
+  closeBtn.onmouseover = () => {
+    closeBtn.style.backgroundColor = '#5aaeff';
+  };
+  closeBtn.onmouseout = () => {
+    closeBtn.style.backgroundColor = '#4a9eff';
+  };
+  closeBtn.onclick = () => {
+    modal.remove();
+    style.remove();
+  };
+
+  // Assemble modal
+  modalContent.appendChild(titleEl);
+  modalContent.appendChild(contentEl);
+  modalContent.appendChild(closeBtn);
+  modal.appendChild(modalContent);
+
+  // Close on overlay click
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      modal.remove();
+      style.remove();
+    }
+  };
+
+  // Close on Escape key
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      modal.remove();
+      style.remove();
+      document.removeEventListener('keydown', handleEscape);
+    }
+  };
+  document.addEventListener('keydown', handleEscape);
+
+  document.body.appendChild(modal);
+}
+
 // Show help alert
 export function showHelpAlert() {
   const helpText = `How to use the Fulldome Visualiser:
@@ -179,9 +300,17 @@ export function showCreditsAlert() {
   const creditsText = `Credits:
 
 3D model by Ashley Reed
+https://smash.studio/
+(Modelled after the dome at Tekniska museet, Stockholm)
+
 Original dome visualiser by Per-Olov Jernberg
+https://possan.se/
+
 Design and development by Jonas Johansson
-Background by Paul Bourke`;
+https://jonasjohansson.se
+
+Background by Paul Bourke
+https://paulbourke.net/`;
 
   alert(creditsText);
 }

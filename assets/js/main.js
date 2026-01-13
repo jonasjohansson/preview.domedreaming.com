@@ -113,6 +113,22 @@ async function init() {
 }
 
 function setupEventListeners() {
+  // Prevent scrolling/swiping on mobile, but allow interactions with GUI and inputs
+  document.addEventListener("touchmove", (e) => {
+    // Allow touch events on interactive elements (GUI, inputs, buttons)
+    const target = e.target;
+    if (target.tagName === 'INPUT' || 
+        target.tagName === 'BUTTON' || 
+        target.tagName === 'SELECT' ||
+        target.closest('.lil-gui') ||
+        target === canvas || 
+        canvas.contains(target)) {
+      return;
+    }
+    // Prevent scrolling elsewhere
+    e.preventDefault();
+  }, { passive: false });
+  
   // Create file input for uploads
   let fileInput = null;
   function getFileInput() {
