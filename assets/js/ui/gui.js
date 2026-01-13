@@ -79,7 +79,7 @@ export function initGUI(modules) {
   touchMovement = modules.touchMovement;
 
   // Create GUI
-  gui = new GUI({ title: 'Fulldome Visualiser', width: 280 });
+  gui = new GUI({ title: 'Fulldome Preview', width: 280 });
 
   // Media controls at root
   gui.add(controls, 'upload').name('📁 Upload Image/Video');
@@ -273,7 +273,7 @@ function showCustomModal(title, htmlContent) {
 
 // Show help alert
 export function showHelpAlert() {
-  const helpText = `How to use the Fulldome Visualiser:
+  const helpText = `How to use the Fulldome Preview:
 
 Movement:
 - WASD: Move camera (W=forward, S=backward, A=left, D=right)
@@ -303,7 +303,7 @@ export function showCreditsAlert() {
 https://smash.studio/
 (Modelled after the dome at Tekniska museet, Stockholm)
 
-Original dome visualiser by Per-Olov Jernberg
+Original dome preview by Per-Olov Jernberg
 https://possan.se/
 
 Design and development by Jonas Johansson
