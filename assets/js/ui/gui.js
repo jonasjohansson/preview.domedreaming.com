@@ -135,21 +135,6 @@ export function initGUI(modules) {
   // Hide video controls initially
   Object.values(videoControllers).forEach(controller => controller.hide());
 
-  // Help button at the bottom
-  const controlsInfo = {
-    help: () => {
-      alert('Controls:\n\n' +
-        'W - Move Forward\n' +
-        'S - Move Backward\n' +
-        'A - Move Left\n' +
-        'D - Move Right\n' +
-        'Q - Rotate Left\n' +
-        'E - Rotate Right\n\n' +
-        'Click and Drag - Rotate camera'
-      );
-    }
-  };
-  gui.add(controlsInfo, 'help').name('📖 Help');
 
   // Setup keyboard handlers for movement
   setupKeyboardHandlers();

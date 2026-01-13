@@ -1,3 +1,11 @@
-@import "./base.css";
-@import "./blocks.css";
-@import "./layout.css";
+@import "base.css";
+@import "blocks.css";
+@import "layout.css";
+
+/* Custom styling for lil-gui help text */
+.lil-gui .lil-text input[disabled] {
+  font-size: 14px !important;
+  padding: 8px !important;
+  min-height: 40px !important;
+  line-height: 1.4 !important;
+}
