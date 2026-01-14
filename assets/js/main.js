@@ -182,21 +182,6 @@ function setupEventListeners() {
     setTimeout(handleResize, 100);
   });
 
-  // Setup keyboard shortcuts for file upload
-  window.addEventListener("keydown", async (e) => {
-    if (e.key === "u" || e.key === "U") {
-      e.preventDefault();
-      getFileInput().click();
-    } else if (e.key === "c" || e.key === "C") {
-      e.preventDefault();
-      if (!connectWebcam) {
-        await load3DModules();
-      }
-      if (confirm("Do you want to connect your webcam to the screen?")) {
-        connectWebcam();
-      }
-    }
-  });
 }
 
 function animate(currentTime) {
