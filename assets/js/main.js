@@ -10,6 +10,7 @@ import {
   updatePostProcessing,
   setupCameraControls,
   euler,
+  updateCameraFOV,
 } from "./3d/index.js";
 
 // 3D model and movement will be dynamically imported for code splitting
@@ -24,6 +25,7 @@ import {
   currentCameraRotation,
   startCameraPosition,
   startCameraRotation,
+  cameraSettings,
 } from "./core/settings.js";
 import * as THREE from "three";
 
@@ -77,6 +79,9 @@ async function init() {
   // Load settings
   await loadSettings();
 
+  // Update camera FOV from settings
+  updateCameraFOV(cameraSettings.fov || 80);
+
   // Setup 3D scene
   setupLighting();
   initPostProcessing();
@@ -106,6 +111,7 @@ async function init() {
       disconnectWebcam,
       getCurrentVideo,
       touchMovement,
+      updateCameraFOV,
     });
   } catch (error) {
     console.error("Error initializing GUI:", error);

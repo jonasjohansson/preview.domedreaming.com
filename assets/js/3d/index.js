@@ -4,7 +4,7 @@
  */
 
 // Scene exports
-export { scene, camera, renderer, canvas, canvasContainer, setResizeHandler, resetCamera } from "./scene.js";
+export { scene, camera, renderer, canvas, canvasContainer, setResizeHandler, resetCamera, updateCameraFOV } from "./scene.js";
 
 // Camera exports
 export { 

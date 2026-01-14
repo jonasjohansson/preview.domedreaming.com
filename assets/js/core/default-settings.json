@@ -23,7 +23,8 @@
     },
     "cameraSettings": {
       "sensitivity": 0.002,
-      "rotationSpeed": 120
+      "rotationSpeed": 120,
+      "fov": 80
     },
     "startCameraPosition": {
       "x": 0,

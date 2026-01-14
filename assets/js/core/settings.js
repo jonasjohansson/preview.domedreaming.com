@@ -3,6 +3,7 @@ export let moveSpeed = 1;
 export let cameraSettings = {
   sensitivity: 0.002,
   rotationSpeed: 120,
+  fov: 80,
 };
 export let startCameraPosition = { x: 0, y: 5.4, z: -4.3 };
 export let startCameraRotation = { x: -3, y: 0, z: 3.121154018741333 };

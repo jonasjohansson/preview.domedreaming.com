@@ -1,5 +1,6 @@
 // GUI Controller Module using lil-gui
 import GUI from 'lil-gui';
+import { cameraSettings } from '../core/settings.js';
 
 let gui = null;
 let videoControllers = null;
@@ -10,6 +11,7 @@ let touchMovement;
 let fileInput = null;
 let videoUpdateInterval = null;
 let isCameraConnected = false;
+let updateCameraFOV = null;
 
 // Control objects
 const controls = {
@@ -67,6 +69,9 @@ const controls = {
   videoTime: 0,
   videoLoop: true,
   videoVolume: 0,
+  
+  // Camera controls
+  cameraFOV: 80,
 };
 
 export function initGUI(modules) {
@@ -77,6 +82,10 @@ export function initGUI(modules) {
   disconnectWebcam = modules.disconnectWebcam;
   getCurrentVideo = modules.getCurrentVideo;
   touchMovement = modules.touchMovement;
+  updateCameraFOV = modules.updateCameraFOV;
+
+  // Initialize FOV from settings
+  controls.cameraFOV = cameraSettings.fov || 80;
 
   // Create GUI
   gui = new GUI({ title: 'Fulldome Preview', width: 280 });
@@ -86,6 +95,14 @@ export function initGUI(modules) {
   cameraController = gui.add(controls, 'camera').name('📷 Connect Camera');
   cameraController.onChange(() => {
     updateCameraButton();
+  });
+  
+  // Camera FOV slider
+  gui.add(controls, 'cameraFOV', 30, 120, 1).name('📐 Camera FOV').onChange((fov) => {
+    cameraSettings.fov = fov;
+    if (updateCameraFOV) {
+      updateCameraFOV(fov);
+    }
   });
   
   // Help and Credits buttons

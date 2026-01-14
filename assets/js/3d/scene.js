@@ -1,9 +1,10 @@
 import * as THREE from "three";
+import { cameraSettings } from "../core/settings.js";
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1a1a);
 
-export const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+export const camera = new THREE.PerspectiveCamera(cameraSettings.fov || 80, window.innerWidth / window.innerHeight, 0.1, 1000);
 // Initialize with default position (will be reset when model loads)
 camera.position.set(0, 5.4, -4.3);
 camera.rotation.set(-3, 0, 3.121154018741333);
@@ -78,4 +79,12 @@ export function resetCamera(position, rotation, euler) {
       euler.setFromQuaternion(camera.quaternion);
     }
   }
+}
+
+/**
+ * Update camera FOV
+ */
+export function updateCameraFOV(fov) {
+  camera.fov = fov;
+  camera.updateProjectionMatrix();
 }
