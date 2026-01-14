@@ -305,9 +305,9 @@ Media:
 Colors:
 - Adjust colors of 3D objects using the color pickers
 
-Keyboard shortcuts:
-- U: Upload image/video
-- C: Connect/disconnect camera`;
+Other fulldome tools:
+- Domeport: https://domeport.sat.qc.ca/
+- Wizdome Visualiser: https://lab.possan.codes/wizdome/vis/4/index.html`;
 
   alert(helpText);
 }
