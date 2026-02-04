@@ -16,7 +16,7 @@ import {
 // 3D model and movement will be dynamically imported for code splitting
 let loadModel, updateMovement, updateRotation, fbxMeshes, glbLights;
 let getCurrentImageTexture, getCurrentVideoTexture, getCurrentVideo, connectWebcam;
-let loadImage, loadVideo, disconnectWebcam, loadDefaultScreenTexture;
+let loadImage, loadVideo, loadVideoFromURL, disconnectWebcam, loadDefaultScreenTexture;
 let updateScreenLighting, touchMovement;
 
 import {
@@ -58,6 +58,7 @@ async function load3DModules() {
     connectWebcam = textureModule.connectWebcam;
     loadImage = textureModule.loadImage;
     loadVideo = textureModule.loadVideo;
+    loadVideoFromURL = textureModule.loadVideoFromURL;
     disconnectWebcam = textureModule.disconnectWebcam;
     loadDefaultScreenTexture = textureModule.loadDefaultScreenTexture;
     updateScreenLighting = screenLightingModule.updateScreenLighting;
@@ -68,6 +69,7 @@ async function load3DModules() {
     window.connectWebcam = connectWebcam;
     window.loadImage = loadImage;
     window.loadVideo = loadVideo;
+    window.loadVideoFromURL = loadVideoFromURL;
     window.disconnectWebcam = disconnectWebcam;
     window.loadDefaultScreenTexture = loadDefaultScreenTexture;
   } catch (error) {
@@ -103,6 +105,7 @@ async function init() {
     initGUI({
       loadImage,
       loadVideo,
+      loadVideoFromURL,
       connectWebcam: async () => {
         if (connectWebcam) {
           await connectWebcam();

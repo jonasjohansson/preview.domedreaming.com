@@ -6,7 +6,7 @@ let gui = null;
 let videoControllers = null;
 let cameraController = null;
 let colorControllers = {};
-let loadImage, loadVideo, connectWebcam, disconnectWebcam, getCurrentVideo;
+let loadImage, loadVideo, loadVideoFromURL, connectWebcam, disconnectWebcam, getCurrentVideo;
 let touchMovement;
 let fileInput = null;
 let videoUpdateInterval = null;
@@ -63,7 +63,10 @@ const controls = {
       }
     }
   },
-  
+  loadURL: () => {
+    showURLInputModal();
+  },
+
   // Video controls
   videoPlaying: false,
   videoTime: 0,
@@ -78,6 +81,7 @@ export function initGUI(modules) {
   // Get functions from modules
   loadImage = modules.loadImage;
   loadVideo = modules.loadVideo;
+  loadVideoFromURL = modules.loadVideoFromURL;
   connectWebcam = modules.connectWebcam;
   disconnectWebcam = modules.disconnectWebcam;
   getCurrentVideo = modules.getCurrentVideo;
@@ -92,6 +96,7 @@ export function initGUI(modules) {
 
   // Media controls at root
   gui.add(controls, 'upload').name('📁 Upload Image/Video');
+  gui.add(controls, 'loadURL').name('🔗 Load from URL');
   cameraController = gui.add(controls, 'camera').name('📷 Connect Camera');
   cameraController.onChange(() => {
     updateCameraButton();
@@ -286,6 +291,209 @@ function showCustomModal(title, htmlContent) {
   document.addEventListener('keydown', handleEscape);
 
   document.body.appendChild(modal);
+}
+
+// Show URL input modal for loading video from URL
+function showURLInputModal() {
+  // Remove existing modal if any
+  const existingModal = document.getElementById('url-input-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  // Create modal overlay
+  const modal = document.createElement('div');
+  modal.id = 'url-input-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  `;
+
+  // Create modal content
+  const modalContent = document.createElement('div');
+  modalContent.style.cssText = `
+    background-color: #1a1a1a;
+    color: #ffffff;
+    padding: 24px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  `;
+
+  // Create title
+  const titleEl = document.createElement('h2');
+  titleEl.textContent = 'Load Video from URL';
+  titleEl.style.cssText = `
+    margin: 0 0 16px 0;
+    font-size: 20px;
+    font-weight: 600;
+  `;
+
+  // Create description
+  const descEl = document.createElement('p');
+  descEl.innerHTML = `Enter a direct URL to a video file (.mp4, .webm, etc.)<br><br>
+    <small style="color: #888;">Note: YouTube and Vimeo page URLs won't work due to browser security restrictions.
+    Use direct video file URLs or Vimeo Pro direct links.</small>`;
+  descEl.style.cssText = `
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  `;
+
+  // Create input
+  const input = document.createElement('input');
+  input.type = 'url';
+  input.placeholder = 'https://example.com/video.mp4';
+  input.style.cssText = `
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background-color: #2a2a2a;
+    color: #fff;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+  `;
+
+  // Create error message element (hidden by default)
+  const errorEl = document.createElement('p');
+  errorEl.style.cssText = `
+    color: #ff6b6b;
+    font-size: 13px;
+    margin: 0 0 16px 0;
+    display: none;
+  `;
+
+  // Create button container
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.cssText = `
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  `;
+
+  // Create cancel button
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.cssText = `
+    padding: 8px 16px;
+    background-color: #444;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+  `;
+  cancelBtn.onmouseover = () => { cancelBtn.style.backgroundColor = '#555'; };
+  cancelBtn.onmouseout = () => { cancelBtn.style.backgroundColor = '#444'; };
+
+  // Create load button
+  const loadBtn = document.createElement('button');
+  loadBtn.textContent = 'Load Video';
+  loadBtn.style.cssText = `
+    padding: 8px 16px;
+    background-color: #4a9eff;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+  `;
+  loadBtn.onmouseover = () => { loadBtn.style.backgroundColor = '#5aaeff'; };
+  loadBtn.onmouseout = () => { loadBtn.style.backgroundColor = '#4a9eff'; };
+
+  const closeModal = () => {
+    modal.remove();
+  };
+
+  const handleLoad = async () => {
+    const url = input.value.trim();
+    if (!url) {
+      errorEl.textContent = 'Please enter a URL';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(url);
+    } catch {
+      errorEl.textContent = 'Please enter a valid URL';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    // Show loading state
+    loadBtn.textContent = 'Loading...';
+    loadBtn.disabled = true;
+    errorEl.style.display = 'none';
+
+    try {
+      if (loadVideoFromURL) {
+        await loadVideoFromURL(url);
+        closeModal();
+      } else {
+        throw new Error('Video loading not available');
+      }
+    } catch (error) {
+      errorEl.textContent = error.message || 'Failed to load video';
+      errorEl.style.display = 'block';
+      loadBtn.textContent = 'Load Video';
+      loadBtn.disabled = false;
+    }
+  };
+
+  cancelBtn.onclick = closeModal;
+  loadBtn.onclick = handleLoad;
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      handleLoad();
+    }
+  });
+
+  // Close on overlay click
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  };
+
+  // Close on Escape key
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', handleEscape);
+    }
+  };
+  document.addEventListener('keydown', handleEscape);
+
+  // Assemble modal
+  buttonContainer.appendChild(cancelBtn);
+  buttonContainer.appendChild(loadBtn);
+  modalContent.appendChild(titleEl);
+  modalContent.appendChild(descEl);
+  modalContent.appendChild(input);
+  modalContent.appendChild(errorEl);
+  modalContent.appendChild(buttonContainer);
+  modal.appendChild(modalContent);
+
+  document.body.appendChild(modal);
+
+  // Focus the input
+  setTimeout(() => input.focus(), 100);
 }
 
 // Show help alert

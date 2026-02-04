@@ -157,6 +157,67 @@ export function loadVideo(file) {
   video.addEventListener("error", () => {});
 }
 
+export function loadVideoFromURL(url) {
+  if (!screenObject) return Promise.reject(new Error("Screen object not available"));
+
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.crossOrigin = "anonymous";
+    video.loop = true;
+    video.muted = false;
+    video.volume = 0;
+    video.playsInline = true;
+
+    video.addEventListener("loadedmetadata", () => {
+      if (window.setupVideoControls) {
+        setTimeout(() => window.setupVideoControls(), 100);
+      }
+      video.play();
+
+      if (currentVideoTexture) currentVideoTexture.dispose();
+      if (currentVideo) {
+        currentVideo.pause();
+        currentVideo.src = "";
+      }
+      if (currentImageTexture) {
+        currentImageTexture.dispose();
+        currentImageTexture = null;
+      }
+      if (currentWebcamStream) {
+        currentWebcamStream.getTracks().forEach((track) => track.stop());
+        currentWebcamStream = null;
+      }
+
+      const videoTexture = new THREE.VideoTexture(video);
+      configureTexture(videoTexture);
+      videoTexture.minFilter = THREE.LinearFilter;
+      videoTexture.magFilter = THREE.LinearFilter;
+      videoTexture.rotation = 0;
+
+      applyTextureToScreen(videoTexture, screenObject);
+      currentVideoTexture = videoTexture;
+      currentVideo = video;
+
+      const material = getMaterial(screenObject);
+      if (material) {
+        setTimeout(() => {
+          Object.assign(material, SCREEN_MATERIAL_SETTINGS);
+          material.needsUpdate = true;
+        }, 200);
+      }
+
+      resolve(video);
+    });
+
+    video.addEventListener("error", (e) => {
+      console.error("Error loading video from URL:", e);
+      reject(new Error("Failed to load video. Make sure the URL points directly to a video file (e.g., .mp4, .webm) and allows cross-origin access."));
+    });
+
+    video.src = url;
+  });
+}
+
 export function connectWebcam() {
   if (!screenObject) return Promise.reject(new Error("Screen object not available"));
 
