@@ -17,7 +17,7 @@ import {
 let loadModel, updateMovement, updateRotation, fbxMeshes, glbLights;
 let getCurrentImageTexture, getCurrentVideoTexture, getCurrentVideo, connectWebcam;
 let loadImage, loadVideo, loadVideoFromURL, disconnectWebcam, loadDefaultScreenTexture;
-let getCurrentVideoFilename, getScreenObject, applyProjectionMode;
+let getCurrentVideoFilename, getScreenObject, applyProjectionMode, setTextureColorSpace;
 let updateScreenLighting, touchMovement;
 
 import {
@@ -65,6 +65,7 @@ async function load3DModules() {
     getCurrentVideoFilename = textureModule.getCurrentVideoFilename;
     getScreenObject = textureModule.getScreenObject;
     applyProjectionMode = textureModule.applyProjectionMode;
+    setTextureColorSpace = textureModule.setTextureColorSpace;
     updateScreenLighting = screenLightingModule.updateScreenLighting;
     touchMovement = movementModule.touchMovement;
 
@@ -121,6 +122,7 @@ async function init() {
       getCurrentVideoTexture,
       getScreenObject,
       applyProjectionMode,
+      setTextureColorSpace,
       touchMovement,
       updateCameraFOV,
     });

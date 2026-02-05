@@ -9,7 +9,7 @@ let cameraController = null;
 let flyModeController = null;
 let colorControllers = {};
 let loadImage, loadVideo, loadVideoFromURL, connectWebcam, disconnectWebcam, getCurrentVideo;
-let getCurrentVideoFilename, getCurrentVideoTexture, getScreenObject, applyProjectionMode;
+let getCurrentVideoFilename, getCurrentVideoTexture, getScreenObject, applyProjectionMode, setTextureColorSpace;
 let touchMovement;
 let fileInput = null;
 let videoUpdateInterval = null;
@@ -94,6 +94,7 @@ const controls = {
 
   // Projection and transform controls
   projectionMode: 'dome',
+  colorSpace: 'sRGB',
   panX: 0,
   panY: 0,
   tilt: 0,
@@ -133,6 +134,7 @@ export function initGUI(modules) {
   getCurrentVideoTexture = modules.getCurrentVideoTexture;
   getScreenObject = modules.getScreenObject;
   applyProjectionMode = modules.applyProjectionMode;
+  setTextureColorSpace = modules.setTextureColorSpace;
   touchMovement = modules.touchMovement;
   updateCameraFOV = modules.updateCameraFOV;
 
@@ -237,6 +239,14 @@ export function initGUI(modules) {
     applyTransformToTexture();
   });
 
+  // 9b. Color Space dropdown (for PNG sequences that need linear color)
+  const colorSpaceController = gui.add(controls, 'colorSpace', ['sRGB', 'linear']).name('Color Space').onChange((value) => {
+    const texture = getCurrentVideoTexture ? getCurrentVideoTexture() : null;
+    if (texture && setTextureColorSpace) {
+      setTextureColorSpace(texture, value);
+    }
+  });
+
   // 10. Pan/Tilt/Roll sliders
   const panXController = gui.add(controls, 'panX', -1, 1).name('Pan X').step(0.01).onChange(() => {
     applyTransformToTexture();
@@ -273,6 +283,7 @@ export function initGUI(modules) {
     loop: loopController,
     volume: volumeController,
     projection: projectionController,
+    colorSpace: colorSpaceController,
     panX: panXController,
     panY: panYController,
     tilt: tiltController,
@@ -811,12 +822,14 @@ function setupVideoControls() {
     controls.roll = 0;
     controls.scale = 1;
     controls.projectionMode = 'dome';
+    controls.colorSpace = 'sRGB';
 
     // Update controllers
     videoControllers.loop.setValue(video.loop);
     videoControllers.volume.setValue(Math.round(video.volume * 100));
     videoControllers.playPause.setValue(!video.paused);
     if (videoControllers.projection) videoControllers.projection.setValue('dome');
+    if (videoControllers.colorSpace) videoControllers.colorSpace.setValue('sRGB');
     if (videoControllers.panX) videoControllers.panX.updateDisplay();
     if (videoControllers.panY) videoControllers.panY.updateDisplay();
     if (videoControllers.tilt) videoControllers.tilt.updateDisplay();

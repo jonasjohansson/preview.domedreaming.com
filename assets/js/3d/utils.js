@@ -38,15 +38,22 @@ export function applyTextureToScreen(texture, screenObject) {
   material.needsUpdate = true;
 }
 
-export function configureTexture(texture) {
+export function configureTexture(texture, colorSpace = 'sRGB') {
   texture.flipY = true;
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.x = 1; // Flip on X axis (horizontal flip)
   texture.repeat.y = -1; // Keep Y axis normal
-  texture.colorSpace = THREE.SRGBColorSpace;
+  // Color space: sRGB assumes gamma-encoded input, Linear assumes linear input
+  texture.colorSpace = colorSpace === 'linear' ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
   // Set center to (0.5, 0.5) for rotation around center
   texture.center.set(0.5, 0.5);
+  texture.needsUpdate = true;
+}
+
+export function setTextureColorSpace(texture, colorSpace) {
+  if (!texture) return;
+  texture.colorSpace = colorSpace === 'linear' ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
   texture.needsUpdate = true;
 }
 
