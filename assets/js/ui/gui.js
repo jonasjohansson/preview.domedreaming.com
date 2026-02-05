@@ -150,9 +150,19 @@ export function initGUI(modules) {
   // Create GUI
   gui = new GUI({ title: 'Fulldome Preview', width: 280 });
 
+  // Help and Credits at the top
+  gui.add({ showHelp: () => showHelpAlert() }, 'showHelp').name('❓ Help');
+  gui.add({ showCredits: () => showCreditsAlert() }, 'showCredits').name('ℹ️ Credits');
+
   // Media controls at root
   gui.add(controls, 'upload').name('📁 Upload Image/Video');
   gui.add(controls, 'loadURL').name('🔗 Load from URL');
+
+  // Connect Camera button first
+  cameraController = gui.add(controls, 'camera').name('📷 Connect Camera');
+  cameraController.onChange(() => {
+    updateCameraButton();
+  });
 
   // Camera device selection dropdown
   cameraSelectController = gui.add(controls, 'cameraDevice', { 'Default Camera': 'default' }).name('📹 Camera').onChange((value) => {
@@ -172,11 +182,6 @@ export function initGUI(modules) {
 
   // Populate camera list
   refreshCameraList();
-
-  cameraController = gui.add(controls, 'camera').name('📷 Connect Camera');
-  cameraController.onChange(() => {
-    updateCameraButton();
-  });
 
   // Camera FOV slider
   gui.add(controls, 'cameraFOV', 30, 120, 1).name('📐 Camera FOV').onChange((fov) => {
@@ -327,9 +332,6 @@ export function initGUI(modules) {
   // Setup color controls after model loads
   setupColorControls();
 
-  // Help and Credits buttons at the bottom
-  gui.add({ showHelp: () => showHelpAlert() }, 'showHelp').name('❓ Help');
-  gui.add({ showCredits: () => showCreditsAlert() }, 'showCredits').name('ℹ️ Credits');
 }
 
 // Custom modal function for displaying HTML content with links
