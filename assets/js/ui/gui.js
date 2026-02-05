@@ -199,9 +199,6 @@ export function initGUI(modules) {
     }
   };
 
-  // Help and Credits buttons
-  gui.add({ showHelp: () => showHelpAlert() }, 'showHelp').name('❓ Help');
-  gui.add({ showCredits: () => showCreditsAlert() }, 'showCredits').name('ℹ️ Credits');
 
   // Video controls at root (hidden by default)
   // 1. File title (readonly)
@@ -326,9 +323,13 @@ export function initGUI(modules) {
 
   // Start video update loop
   startVideoUpdateLoop();
-  
+
   // Setup color controls after model loads
   setupColorControls();
+
+  // Help and Credits buttons at the bottom
+  gui.add({ showHelp: () => showHelpAlert() }, 'showHelp').name('❓ Help');
+  gui.add({ showCredits: () => showCreditsAlert() }, 'showCredits').name('ℹ️ Credits');
 }
 
 // Custom modal function for displaying HTML content with links
@@ -717,12 +718,16 @@ async function setupColorControls() {
       const modelModule = await import("../3d/model.js");
       if (modelModule.fbxMeshes && modelModule.fbxMeshes.length > 0) {
         const { getMaterial, colorToHex } = await import("../3d/utils.js");
-        
+
         // Initialize savedColorSettings if needed
         if (!window.savedColorSettings) {
           window.savedColorSettings = {};
         }
-        
+
+        // Create a folder for color controls
+        const colorFolder = gui.addFolder('Colors');
+        colorFolder.close(); // Start collapsed
+
         // Create color controls for each mesh
         modelModule.fbxMeshes.forEach((item) => {
           const material = getMaterial(item.mesh);
@@ -735,29 +740,29 @@ async function setupColorControls() {
             } else {
               currentColor = colorToHex(material.color);
             }
-            
+
             // Create color object for this mesh
             const colorObj = { color: currentColor };
-            
-            // Add color controller
-            const controller = gui.addColor(colorObj, 'color').name(item.name);
+
+            // Add color controller to the folder
+            const controller = colorFolder.addColor(colorObj, 'color').name(item.name);
             controller.onChange((value) => {
               // Convert hex to RGB (0-1)
               const hex = value.replace('#', '');
               const r = parseInt(hex.substring(0, 2), 16) / 255;
               const g = parseInt(hex.substring(2, 4), 16) / 255;
               const b = parseInt(hex.substring(4, 6), 16) / 255;
-              
+
               // Update material
               material.color.setRGB(r, g, b);
               material.needsUpdate = true;
-              
+
               // Save to settings
               window.savedColorSettings[item.name] = { r, g, b };
-              
+
               // Colors are updated in memory only (no persistence)
             });
-            
+
             colorControllers[item.name] = controller;
           }
         });
