@@ -168,7 +168,21 @@ export function loadVideo(file) {
   video.addEventListener("error", () => {});
 }
 
-export function loadVideoFromURL(url) {
+// Check if URL is an HLS stream
+function isHLSUrl(url) {
+  return url.includes('.m3u8');
+}
+
+// Check if browser natively supports HLS (Safari)
+function supportsNativeHLS() {
+  const video = document.createElement('video');
+  return video.canPlayType('application/vnd.apple.mpegurl') !== '';
+}
+
+// Store current HLS instance for cleanup
+let currentHls = null;
+
+export async function loadVideoFromURL(url) {
   if (!screenObject) return Promise.reject(new Error("Screen object not available"));
 
   // Extract filename from URL
@@ -180,7 +194,13 @@ export function loadVideoFromURL(url) {
     currentVideoFilename = url;
   }
 
-  return new Promise((resolve, reject) => {
+  // Cleanup previous HLS instance
+  if (currentHls) {
+    currentHls.destroy();
+    currentHls = null;
+  }
+
+  return new Promise(async (resolve, reject) => {
     const video = document.createElement("video");
     video.crossOrigin = "anonymous";
     video.loop = true;
@@ -188,7 +208,7 @@ export function loadVideoFromURL(url) {
     video.volume = 0;
     video.playsInline = true;
 
-    video.addEventListener("loadedmetadata", () => {
+    const onVideoReady = () => {
       if (window.setupVideoControls) {
         setTimeout(() => window.setupVideoControls(), 100);
       }
@@ -227,14 +247,62 @@ export function loadVideoFromURL(url) {
       }
 
       resolve(video);
-    });
+    };
 
-    video.addEventListener("error", (e) => {
-      console.error("Error loading video from URL:", e);
-      reject(new Error("Failed to load video. Make sure the URL points directly to a video file (e.g., .mp4, .webm) and allows cross-origin access."));
-    });
+    // Handle HLS streams
+    if (isHLSUrl(url)) {
+      if (supportsNativeHLS()) {
+        // Safari supports HLS natively
+        video.addEventListener("loadedmetadata", onVideoReady, { once: true });
+        video.addEventListener("error", (e) => {
+          console.error("Error loading HLS stream:", e);
+          reject(new Error("Failed to load HLS stream."));
+        });
+        video.src = url;
+      } else {
+        // Use hls.js for Chrome/Firefox
+        try {
+          const Hls = (await import('hls.js')).default;
 
-    video.src = url;
+          if (!Hls.isSupported()) {
+            reject(new Error("HLS is not supported in this browser."));
+            return;
+          }
+
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+          });
+
+          currentHls = hls;
+
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            onVideoReady();
+          });
+
+          hls.on(Hls.Events.ERROR, (event, data) => {
+            if (data.fatal) {
+              console.error("HLS fatal error:", data);
+              reject(new Error(`HLS stream error: ${data.type}`));
+            }
+          });
+
+          hls.loadSource(url);
+          hls.attachMedia(video);
+        } catch (error) {
+          console.error("Error loading hls.js:", error);
+          reject(new Error("Failed to load HLS library."));
+        }
+      }
+    } else {
+      // Regular video file
+      video.addEventListener("loadedmetadata", onVideoReady, { once: true });
+      video.addEventListener("error", (e) => {
+        console.error("Error loading video from URL:", e);
+        reject(new Error("Failed to load video. Make sure the URL points directly to a video file (e.g., .mp4, .webm) and allows cross-origin access."));
+      });
+      video.src = url;
+    }
   });
 }
 

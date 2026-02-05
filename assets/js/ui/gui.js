@@ -501,9 +501,10 @@ function showURLInputModal() {
 
   // Create description
   const descEl = document.createElement('p');
-  descEl.innerHTML = `Enter a direct URL to a video file (.mp4, .webm, etc.)<br><br>
-    <small style="color: #888;">Note: YouTube and Vimeo page URLs won't work due to browser security restrictions.
-    Use direct video file URLs or Vimeo Pro direct links.</small>`;
+  descEl.innerHTML = `Enter a direct URL to a video file or stream:<br>
+    • Video files: .mp4, .webm<br>
+    • HLS streams: .m3u8 (VLC, OBS, IP cameras)<br><br>
+    <small style="color: #888;">Note: YouTube/Vimeo page URLs won't work. Use direct video URLs or HLS stream URLs.</small>`;
   descEl.style.cssText = `
     font-size: 14px;
     line-height: 1.6;
