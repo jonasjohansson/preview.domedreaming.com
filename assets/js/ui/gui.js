@@ -9,12 +9,15 @@ let cameraController = null;
 let flyModeController = null;
 let colorControllers = {};
 let loadImage, loadVideo, loadVideoFromURL, connectWebcam, disconnectWebcam, getCurrentVideo;
-let getCurrentVideoFilename, getCurrentVideoTexture, getScreenObject, applyProjectionMode, setTextureColorSpace;
+let getCurrentVideoFilename, getCurrentVideoTexture, getScreenObject, applyProjectionMode, setTextureColorSpace, getVideoDevices;
 let touchMovement;
 let fileInput = null;
 let videoUpdateInterval = null;
 let isCameraConnected = false;
 let updateCameraFOV = null;
+let videoDevices = [];
+let selectedDeviceId = null;
+let cameraSelectController = null;
 
 // Store current projection settings for reset
 let currentProjectionMode = 'dome';
@@ -65,7 +68,7 @@ const controls = {
       }
     } else {
       if (connectWebcam) {
-        connectWebcam().then(() => {
+        connectWebcam(selectedDeviceId).then(() => {
           isCameraConnected = true;
           updateCameraButton();
           hideVideoControls();
@@ -76,6 +79,7 @@ const controls = {
       }
     }
   },
+  cameraDevice: 'default',
   loadURL: () => {
     showURLInputModal();
   },
@@ -135,6 +139,7 @@ export function initGUI(modules) {
   getScreenObject = modules.getScreenObject;
   applyProjectionMode = modules.applyProjectionMode;
   setTextureColorSpace = modules.setTextureColorSpace;
+  getVideoDevices = modules.getVideoDevices;
   touchMovement = modules.touchMovement;
   updateCameraFOV = modules.updateCameraFOV;
 
@@ -148,11 +153,31 @@ export function initGUI(modules) {
   // Media controls at root
   gui.add(controls, 'upload').name('📁 Upload Image/Video');
   gui.add(controls, 'loadURL').name('🔗 Load from URL');
+
+  // Camera device selection dropdown
+  cameraSelectController = gui.add(controls, 'cameraDevice', { 'Default Camera': 'default' }).name('📹 Camera').onChange((value) => {
+    selectedDeviceId = value === 'default' ? null : value;
+    // If already connected, reconnect with new device
+    if (isCameraConnected && connectWebcam && disconnectWebcam) {
+      disconnectWebcam();
+      connectWebcam(selectedDeviceId).then(() => {
+        isCameraConnected = true;
+        updateCameraButton();
+      }).catch(() => {
+        isCameraConnected = false;
+        updateCameraButton();
+      });
+    }
+  });
+
+  // Populate camera list
+  refreshCameraList();
+
   cameraController = gui.add(controls, 'camera').name('📷 Connect Camera');
   cameraController.onChange(() => {
     updateCameraButton();
   });
-  
+
   // Camera FOV slider
   gui.add(controls, 'cameraFOV', 30, 120, 1).name('📐 Camera FOV').onChange((fov) => {
     cameraSettings.fov = fov;
@@ -645,6 +670,7 @@ Movement:
 Media:
 - Upload images or videos using the "Upload" button
 - Load videos from URL using the "Load from URL" button
+- Select camera source from the "Camera" dropdown (includes virtual cameras)
 - Connect your webcam using the "Connect Camera" button
 
 Video Controls:
@@ -898,6 +924,50 @@ function startVideoUpdateLoop() {
 function updateCameraButton() {
   if (cameraController) {
     cameraController.name(isCameraConnected ? '🔌 Disconnect Camera' : '📷 Connect Camera');
+  }
+}
+
+// Refresh camera device list
+async function refreshCameraList() {
+  if (!getVideoDevices || !cameraSelectController) return;
+
+  try {
+    videoDevices = await getVideoDevices();
+
+    // Build options object
+    const options = { 'Default Camera': 'default' };
+    videoDevices.forEach(device => {
+      options[device.label] = device.deviceId;
+    });
+
+    // Update the dropdown options
+    // lil-gui doesn't have a direct way to update options, so we rebuild
+    const parent = cameraSelectController.domElement.parentElement.parentElement;
+    const currentValue = controls.cameraDevice;
+    cameraSelectController.destroy();
+
+    cameraSelectController = gui.add(controls, 'cameraDevice', options).name('📹 Camera').onChange((value) => {
+      selectedDeviceId = value === 'default' ? null : value;
+      // If already connected, reconnect with new device
+      if (isCameraConnected && connectWebcam && disconnectWebcam) {
+        disconnectWebcam();
+        connectWebcam(selectedDeviceId).then(() => {
+          isCameraConnected = true;
+          updateCameraButton();
+        }).catch(() => {
+          isCameraConnected = false;
+          updateCameraButton();
+        });
+      }
+    });
+
+    // Restore selected value if still valid
+    if (currentValue && (currentValue === 'default' || videoDevices.some(d => d.deviceId === currentValue))) {
+      controls.cameraDevice = currentValue;
+      cameraSelectController.updateDisplay();
+    }
+  } catch (error) {
+    console.warn("Error refreshing camera list:", error);
   }
 }
 

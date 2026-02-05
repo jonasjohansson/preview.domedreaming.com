@@ -238,7 +238,37 @@ export function loadVideoFromURL(url) {
   });
 }
 
-export function connectWebcam() {
+// Enumerate available video input devices (cameras, virtual cameras)
+export async function getVideoDevices() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+    return [];
+  }
+
+  try {
+    // Request permission first to get device labels
+    await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then(stream => {
+        // Stop the stream immediately, we just needed permission
+        stream.getTracks().forEach(track => track.stop());
+      })
+      .catch(() => {
+        // Permission denied, labels will be empty but we can still enumerate
+      });
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices
+      .filter(device => device.kind === 'videoinput')
+      .map(device => ({
+        deviceId: device.deviceId,
+        label: device.label || `Camera ${device.deviceId.slice(0, 8)}...`
+      }));
+  } catch (error) {
+    console.error("Error enumerating video devices:", error);
+    return [];
+  }
+}
+
+export function connectWebcam(deviceId = null) {
   if (!screenObject) return Promise.reject(new Error("Screen object not available"));
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -246,8 +276,13 @@ export function connectWebcam() {
     return Promise.reject(new Error("Webcam not available"));
   }
 
+  // Build video constraints - use specific device if provided
+  const videoConstraints = deviceId
+    ? { deviceId: { exact: deviceId } }
+    : true;
+
   return navigator.mediaDevices
-    .getUserMedia({ video: true, audio: false })
+    .getUserMedia({ video: videoConstraints, audio: false })
     .then((stream) => {
       if (currentVideoTexture) {
         currentVideoTexture.dispose();
