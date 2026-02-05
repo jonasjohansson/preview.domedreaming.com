@@ -948,26 +948,9 @@ async function refreshCameraList() {
       options[device.label] = device.deviceId;
     });
 
-    // Update the dropdown options
-    // lil-gui doesn't have a direct way to update options, so we rebuild
-    const parent = cameraSelectController.domElement.parentElement.parentElement;
+    // Update the dropdown options in place (preserves position)
     const currentValue = controls.cameraDevice;
-    cameraSelectController.destroy();
-
-    cameraSelectController = gui.add(controls, 'cameraDevice', options).name('📹 Camera').onChange((value) => {
-      selectedDeviceId = value === 'default' ? null : value;
-      // If already connected, reconnect with new device
-      if (isCameraConnected && connectWebcam && disconnectWebcam) {
-        disconnectWebcam();
-        connectWebcam(selectedDeviceId).then(() => {
-          isCameraConnected = true;
-          updateCameraButton();
-        }).catch(() => {
-          isCameraConnected = false;
-          updateCameraButton();
-        });
-      }
-    });
+    cameraSelectController.options(options);
 
     // Restore selected value if still valid
     if (currentValue && (currentValue === 'default' || videoDevices.some(d => d.deviceId === currentValue))) {
