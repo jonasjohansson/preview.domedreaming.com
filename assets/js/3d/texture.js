@@ -8,6 +8,11 @@ let currentVideoTexture = null;
 let currentVideo = null;
 let currentImageTexture = null;
 let currentWebcamStream = null;
+let currentVideoFilename = '';
+
+export function getCurrentVideoFilename() {
+  return currentVideoFilename;
+}
 
 export function setScreenObject(obj) {
   screenObject = obj;
@@ -109,6 +114,9 @@ export function loadImage(file) {
 export function loadVideo(file) {
   if (!screenObject) return;
 
+  // Track filename
+  currentVideoFilename = file.name;
+
   const video = document.createElement("video");
   video.src = URL.createObjectURL(file);
   video.crossOrigin = "anonymous";
@@ -159,6 +167,15 @@ export function loadVideo(file) {
 
 export function loadVideoFromURL(url) {
   if (!screenObject) return Promise.reject(new Error("Screen object not available"));
+
+  // Extract filename from URL
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    currentVideoFilename = pathname.split('/').pop() || url;
+  } catch {
+    currentVideoFilename = url;
+  }
 
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
@@ -303,6 +320,25 @@ export function disconnectWebcam() {
     currentVideo.srcObject = null;
     currentVideo = null;
   }
+}
+
+// Projection mode presets
+const projectionModes = {
+  dome: { repeatX: 1, repeatY: -1, offsetX: 0, offsetY: 0 },
+  equirectangular: { repeatX: 1, repeatY: -1, offsetX: 0, offsetY: 0 },
+  '16:9': { repeatX: 1.78, repeatY: -1, offsetX: -0.39, offsetY: 0 },
+  square: { repeatX: 1, repeatY: -1, offsetX: 0, offsetY: 0 }
+};
+
+export function applyProjectionMode(texture, mode, scale = 1) {
+  const preset = projectionModes[mode] || projectionModes.dome;
+  texture.repeat.set(preset.repeatX * scale, preset.repeatY * scale);
+  texture.offset.set(preset.offsetX, preset.offsetY);
+  texture.needsUpdate = true;
+}
+
+export function getProjectionModes() {
+  return Object.keys(projectionModes);
 }
 
 export function setupDragAndDrop() {

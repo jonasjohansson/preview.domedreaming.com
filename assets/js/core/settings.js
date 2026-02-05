@@ -1,5 +1,10 @@
 // Simplified settings for 3D preview
 export let moveSpeed = 1;
+export let flyMode = false;
+
+export function setFlyMode(value) {
+  flyMode = value;
+}
 export let cameraSettings = {
   sensitivity: 0.002,
   rotationSpeed: 120,

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { canvas, camera } from "./scene.js";
 import { cameraSettings } from "../core/settings.js";
+import * as settings from "../core/settings.js";
 import { touchMovement } from "./movement.js";
 
 // State variables
@@ -170,6 +171,14 @@ export function setupCameraControls() {
     if (e.key === "c" || e.key === "C") {
       console.log("Camera Position:", camera.position);
       console.log("Camera Rotation:", camera.rotation);
+    }
+    // F key to toggle fly mode
+    if (e.key === "f" || e.key === "F") {
+      const newFlyMode = !settings.flyMode;
+      settings.setFlyMode(newFlyMode);
+      if (window.onFlyModeChange) {
+        window.onFlyModeChange(newFlyMode);
+      }
     }
     // Q and E for camera rotation
     if (e.key === "q" || e.key === "Q") {

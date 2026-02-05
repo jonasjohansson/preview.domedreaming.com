@@ -1,17 +1,30 @@
 // GUI Controller Module using lil-gui
 import GUI from 'lil-gui';
 import { cameraSettings } from '../core/settings.js';
+import * as settings from '../core/settings.js';
 
 let gui = null;
 let videoControllers = null;
 let cameraController = null;
+let flyModeController = null;
 let colorControllers = {};
 let loadImage, loadVideo, loadVideoFromURL, connectWebcam, disconnectWebcam, getCurrentVideo;
+let getCurrentVideoFilename, getCurrentVideoTexture, getScreenObject, applyProjectionMode;
 let touchMovement;
 let fileInput = null;
 let videoUpdateInterval = null;
 let isCameraConnected = false;
 let updateCameraFOV = null;
+
+// Store current projection settings for reset
+let currentProjectionMode = 'dome';
+let defaultTransformValues = {
+  panX: 0,
+  panY: 0,
+  tilt: 0,
+  roll: 0,
+  scale: 1
+};
 
 // Control objects
 const controls = {
@@ -72,9 +85,40 @@ const controls = {
   videoTime: 0,
   videoLoop: true,
   videoVolume: 0,
-  
+  videoTitle: '',
+
+  // Time display
+  timeDisplayMode: 'percentage',
+  timeDisplay: '0%',
+  frameRate: 24,
+
+  // Projection and transform controls
+  projectionMode: 'dome',
+  panX: 0,
+  panY: 0,
+  tilt: 0,
+  roll: 0,
+  scale: 1,
+  resetTransform: () => {
+    controls.panX = 0;
+    controls.panY = 0;
+    controls.tilt = 0;
+    controls.roll = 0;
+    controls.scale = 1;
+    applyTransformToTexture();
+    // Update GUI displays
+    if (videoControllers) {
+      if (videoControllers.panX) videoControllers.panX.updateDisplay();
+      if (videoControllers.panY) videoControllers.panY.updateDisplay();
+      if (videoControllers.tilt) videoControllers.tilt.updateDisplay();
+      if (videoControllers.roll) videoControllers.roll.updateDisplay();
+      if (videoControllers.scale) videoControllers.scale.updateDisplay();
+    }
+  },
+
   // Camera controls
   cameraFOV: 80,
+  flyMode: false,
 };
 
 export function initGUI(modules) {
@@ -85,11 +129,16 @@ export function initGUI(modules) {
   connectWebcam = modules.connectWebcam;
   disconnectWebcam = modules.disconnectWebcam;
   getCurrentVideo = modules.getCurrentVideo;
+  getCurrentVideoFilename = modules.getCurrentVideoFilename;
+  getCurrentVideoTexture = modules.getCurrentVideoTexture;
+  getScreenObject = modules.getScreenObject;
+  applyProjectionMode = modules.applyProjectionMode;
   touchMovement = modules.touchMovement;
   updateCameraFOV = modules.updateCameraFOV;
 
   // Initialize FOV from settings
   controls.cameraFOV = cameraSettings.fov || 80;
+  controls.flyMode = settings.flyMode;
 
   // Create GUI
   gui = new GUI({ title: 'Fulldome Preview', width: 280 });
@@ -109,12 +158,31 @@ export function initGUI(modules) {
       updateCameraFOV(fov);
     }
   });
-  
+
+  // Fly mode checkbox
+  flyModeController = gui.add(controls, 'flyMode').name('✈️ Fly Mode (F)').onChange((value) => {
+    settings.setFlyMode(value);
+  });
+
+  // Listen for F key toggle from camera.js
+  window.onFlyModeChange = (newValue) => {
+    controls.flyMode = newValue;
+    if (flyModeController) {
+      flyModeController.updateDisplay();
+    }
+  };
+
   // Help and Credits buttons
   gui.add({ showHelp: () => showHelpAlert() }, 'showHelp').name('❓ Help');
   gui.add({ showCredits: () => showCreditsAlert() }, 'showCredits').name('ℹ️ Credits');
 
   // Video controls at root (hidden by default)
+  // 1. File title (readonly)
+  const titleController = gui.add(controls, 'videoTitle').name('📄 File').listen();
+  titleController.domElement.style.pointerEvents = 'none';
+  titleController.domElement.querySelector('input').readOnly = true;
+
+  // 2. Play/Pause
   const playController = gui.add(controls, 'videoPlaying').name('⏸️ Play/Pause').listen();
   playController.onChange((playing) => {
     const video = getCurrentVideo ? getCurrentVideo() : null;
@@ -126,7 +194,8 @@ export function initGUI(modules) {
       }
     }
   });
-  
+
+  // 3. Time scrubber
   const timeController = gui.add(controls, 'videoTime', 0, 100).name('Time').step(0.1).listen();
   timeController.onChange((value) => {
     const video = getCurrentVideo ? getCurrentVideo() : null;
@@ -134,14 +203,27 @@ export function initGUI(modules) {
       video.currentTime = (value / 100) * video.duration;
     }
   });
-  
+
+  // 4. Time Display Mode dropdown
+  const timeDisplayModeController = gui.add(controls, 'timeDisplayMode', ['percentage', 'seconds', 'frames']).name('Time Format');
+
+  // 5. Time Display (readonly)
+  const timeDisplayController = gui.add(controls, 'timeDisplay').name('Position').listen();
+  timeDisplayController.domElement.style.pointerEvents = 'none';
+  timeDisplayController.domElement.querySelector('input').readOnly = true;
+
+  // 6. Frame Rate (for frames mode)
+  const frameRateController = gui.add(controls, 'frameRate', [24, 25, 30, 60]).name('Frame Rate');
+
+  // 7. Loop
   const loopController = gui.add(controls, 'videoLoop').name('Loop').onChange((loop) => {
     const video = getCurrentVideo ? getCurrentVideo() : null;
     if (video) {
       video.loop = loop;
     }
   });
-  
+
+  // 8. Volume
   const volumeController = gui.add(controls, 'videoVolume', 0, 100).name('Volume').step(1).onChange((volume) => {
     const video = getCurrentVideo ? getCurrentVideo() : null;
     if (video) {
@@ -149,15 +231,56 @@ export function initGUI(modules) {
       video.muted = volume === 0;
     }
   });
-  
+
+  // 9. Projection dropdown
+  const projectionController = gui.add(controls, 'projectionMode', ['dome', 'equirectangular', '16:9', 'square']).name('Projection').onChange(() => {
+    applyTransformToTexture();
+  });
+
+  // 10. Pan/Tilt/Roll sliders
+  const panXController = gui.add(controls, 'panX', -1, 1).name('Pan X').step(0.01).onChange(() => {
+    applyTransformToTexture();
+  });
+
+  const panYController = gui.add(controls, 'panY', -1, 1).name('Pan Y').step(0.01).onChange(() => {
+    applyTransformToTexture();
+  });
+
+  const tiltController = gui.add(controls, 'tilt', -Math.PI, Math.PI).name('Tilt').step(0.01).onChange(() => {
+    applyTransformToTexture();
+  });
+
+  const rollController = gui.add(controls, 'roll', -Math.PI, Math.PI).name('Roll').step(0.01).onChange(() => {
+    applyTransformToTexture();
+  });
+
+  // 11. Scale slider
+  const scaleController = gui.add(controls, 'scale', 0.5, 2.0).name('Scale').step(0.01).onChange(() => {
+    applyTransformToTexture();
+  });
+
+  // 12. Reset Transform button
+  const resetController = gui.add(controls, 'resetTransform').name('↺ Reset Transform');
+
   // Store video controllers for show/hide
   videoControllers = {
+    title: titleController,
     playPause: playController,
     time: timeController,
+    timeDisplayMode: timeDisplayModeController,
+    timeDisplay: timeDisplayController,
+    frameRate: frameRateController,
     loop: loopController,
     volume: volumeController,
+    projection: projectionController,
+    panX: panXController,
+    panY: panYController,
+    tilt: tiltController,
+    roll: rollController,
+    scale: scaleController,
+    reset: resetController,
   };
-  
+
   // Hide video controls initially
   Object.values(videoControllers).forEach(controller => controller.hide());
 
@@ -503,12 +626,22 @@ export function showHelpAlert() {
 Movement:
 - WASD: Move camera (W=forward, S=backward, A=left, D=right)
 - Q/E: Rotate camera left/right
+- F: Toggle Fly Mode (free movement without navmesh)
+- Space: Move up (in Fly Mode)
+- Shift: Move down (in Fly Mode)
 - Click and drag: Look around
 
 Media:
 - Upload images or videos using the "Upload" button
+- Load videos from URL using the "Load from URL" button
 - Connect your webcam using the "Connect Camera" button
-- Use video controls to play, pause, scrub, loop, and adjust volume
+
+Video Controls:
+- Play, pause, scrub, loop, and adjust volume
+- Choose time display format (percentage, seconds, or frames)
+- Change projection mode (dome, equirectangular, 16:9, square)
+- Adjust Pan X/Y, Tilt, Roll, and Scale
+- Reset Transform to restore defaults
 
 Colors:
 - Adjust colors of 3D objects using the color pickers
@@ -621,7 +754,7 @@ function setupKeyboardHandlers() {
 
 function setMovementKey(key, active) {
   if (!touchMovement) return;
-  
+
   const keyLower = key.toLowerCase();
   switch (keyLower) {
     case "w":
@@ -642,38 +775,65 @@ function setMovementKey(key, active) {
     case "e":
       touchMovement.rotateRight = active;
       break;
+    case " ":
+      touchMovement.up = active;
+      break;
+    case "shift":
+      touchMovement.down = active;
+      break;
   }
 }
 
 
 function setupVideoControls() {
   const video = getCurrentVideo ? getCurrentVideo() : null;
-  
+
   if (video && videoControllers) {
     // Show video controls
     Object.values(videoControllers).forEach(controller => controller.show());
-    
+
     // Setup initial values
     controls.videoLoop = video.loop;
     controls.videoVolume = Math.round(video.volume * 100);
     controls.videoPlaying = !video.paused;
-    
+
+    // Set video title
+    const filename = getCurrentVideoFilename ? getCurrentVideoFilename() : '';
+    controls.videoTitle = filename;
+    if (videoControllers.title) {
+      videoControllers.title.updateDisplay();
+    }
+
+    // Reset transform values
+    controls.panX = 0;
+    controls.panY = 0;
+    controls.tilt = 0;
+    controls.roll = 0;
+    controls.scale = 1;
+    controls.projectionMode = 'dome';
+
     // Update controllers
     videoControllers.loop.setValue(video.loop);
     videoControllers.volume.setValue(Math.round(video.volume * 100));
     videoControllers.playPause.setValue(!video.paused);
-    
+    if (videoControllers.projection) videoControllers.projection.setValue('dome');
+    if (videoControllers.panX) videoControllers.panX.updateDisplay();
+    if (videoControllers.panY) videoControllers.panY.updateDisplay();
+    if (videoControllers.tilt) videoControllers.tilt.updateDisplay();
+    if (videoControllers.roll) videoControllers.roll.updateDisplay();
+    if (videoControllers.scale) videoControllers.scale.updateDisplay();
+
     // Listen for video events
     const playHandler = () => {
       controls.videoPlaying = true;
       videoControllers.playPause.updateDisplay();
     };
-    
+
     const pauseHandler = () => {
       controls.videoPlaying = false;
       videoControllers.playPause.updateDisplay();
     };
-    
+
     video.addEventListener("play", playHandler);
     video.addEventListener("pause", pauseHandler);
     video.addEventListener("ended", pauseHandler);
@@ -690,13 +850,33 @@ function startVideoUpdateLoop() {
   if (videoUpdateInterval) {
     clearInterval(videoUpdateInterval);
   }
-  
+
   videoUpdateInterval = setInterval(() => {
     const video = getCurrentVideo ? getCurrentVideo() : null;
     if (video && videoControllers && !videoControllers.time._hidden) {
       if (video.duration) {
         controls.videoTime = (video.currentTime / video.duration) * 100;
         videoControllers.time.updateDisplay();
+
+        // Update time display based on mode
+        const mode = controls.timeDisplayMode;
+        const currentTime = video.currentTime;
+        const duration = video.duration;
+
+        if (mode === 'percentage') {
+          controls.timeDisplay = Math.round((currentTime / duration) * 100) + '%';
+        } else if (mode === 'seconds') {
+          controls.timeDisplay = currentTime.toFixed(1) + 's / ' + duration.toFixed(1) + 's';
+        } else if (mode === 'frames') {
+          const fps = controls.frameRate;
+          const currentFrame = Math.floor(currentTime * fps);
+          const totalFrames = Math.floor(duration * fps);
+          controls.timeDisplay = currentFrame + ' / ' + totalFrames;
+        }
+
+        if (videoControllers.timeDisplay) {
+          videoControllers.timeDisplay.updateDisplay();
+        }
       }
     }
   }, 100);
@@ -706,6 +886,32 @@ function updateCameraButton() {
   if (cameraController) {
     cameraController.name(isCameraConnected ? '🔌 Disconnect Camera' : '📷 Connect Camera');
   }
+}
+
+// Apply current transform values to texture
+function applyTransformToTexture() {
+  const texture = getCurrentVideoTexture ? getCurrentVideoTexture() : null;
+  if (!texture) return;
+
+  // Apply projection mode base values
+  if (applyProjectionMode) {
+    applyProjectionMode(texture, controls.projectionMode, controls.scale);
+  }
+
+  // Apply pan offset on top of projection offset
+  texture.offset.x += controls.panX;
+  texture.offset.y += controls.panY;
+
+  // Apply tilt (texture rotation)
+  texture.rotation = controls.tilt;
+
+  // Apply roll to screen object if available
+  const screen = getScreenObject ? getScreenObject() : null;
+  if (screen) {
+    screen.rotation.z = controls.roll;
+  }
+
+  texture.needsUpdate = true;
 }
 
 // Make functions available globally for texture.js

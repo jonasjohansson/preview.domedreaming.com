@@ -13,7 +13,9 @@ export let touchMovement = {
   left: false,
   right: false,
   rotateLeft: false,  // Q key
-  rotateRight: false  // E key
+  rotateRight: false,  // E key
+  up: false,    // Space key (fly mode)
+  down: false   // Shift key (fly mode)
 };
 
 export function setNavMeshQuery(query) {
@@ -49,7 +51,20 @@ export function updateMovement(deltaTime = 0.016) {
   if (touchMovement.left) movement.add(right.clone().multiplyScalar(-touchMoveSpeed));
   if (touchMovement.right) movement.add(right.clone().multiplyScalar(touchMoveSpeed));
 
+  // Vertical movement in fly mode
+  if (settings.flyMode) {
+    const up = new THREE.Vector3(0, 1, 0);
+    if (keys[" "] || touchMovement.up) movement.add(up.clone().multiplyScalar(currentMoveSpeed));
+    if (keys["shift"] || touchMovement.down) movement.add(up.clone().multiplyScalar(-currentMoveSpeed));
+  }
+
   if (movement.length() === 0) return;
+
+  // Fly mode bypasses navmesh
+  if (settings.flyMode) {
+    camera.position.add(movement);
+    return;
+  }
 
   if (navMeshQuery) {
     const newPosition = camera.position.clone();
