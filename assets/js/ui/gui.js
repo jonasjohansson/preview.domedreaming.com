@@ -58,16 +58,20 @@ const controls = {
     }
     fileInput.click();
   },
-  camera: () => {
+  camera: async () => {
     if (isCameraConnected) {
       if (disconnectWebcam) {
         disconnectWebcam();
         isCameraConnected = false;
         updateCameraButton();
+        hideCameraDropdown();
         hideVideoControls();
       }
     } else {
       if (connectWebcam) {
+        // Request permissions and populate camera list on first connect
+        await refreshCameraList();
+        showCameraDropdown();
         connectWebcam(selectedDeviceId).then(() => {
           isCameraConnected = true;
           updateCameraButton();
@@ -158,14 +162,14 @@ export function initGUI(modules) {
   gui.add(controls, 'upload').name('📁 Upload Image/Video');
   gui.add(controls, 'loadURL').name('🔗 Load from URL');
 
-  // Connect Camera button first
-  cameraController = gui.add(controls, 'camera').name('📷 Connect Camera');
+  // Connect Virtual Camera button
+  cameraController = gui.add(controls, 'camera').name('📷 Connect Virtual Camera');
   cameraController.onChange(() => {
     updateCameraButton();
   });
 
-  // Camera device selection dropdown
-  cameraSelectController = gui.add(controls, 'cameraDevice', { 'Default Camera': 'default' }).name('📹 Camera').onChange((value) => {
+  // Virtual Camera device selection dropdown (hidden until camera is connected)
+  cameraSelectController = gui.add(controls, 'cameraDevice', { 'Default Camera': 'default' }).name('📹 Virtual Camera').onChange((value) => {
     selectedDeviceId = value === 'default' ? null : value;
     // If already connected, reconnect with new device
     if (isCameraConnected && connectWebcam && disconnectWebcam) {
@@ -180,8 +184,8 @@ export function initGUI(modules) {
     }
   });
 
-  // Populate camera list
-  refreshCameraList();
+  // Hide camera dropdown until user connects
+  cameraSelectController.hide();
 
   // Camera FOV slider
   gui.add(controls, 'cameraFOV', 30, 120, 1).name('📐 Camera FOV').onChange((fov) => {
@@ -674,8 +678,8 @@ Movement:
 Media:
 - Upload images or videos using the "Upload" button
 - Load videos from URL using the "Load from URL" button
-- Select camera source from the "Camera" dropdown (includes virtual cameras)
-- Connect your webcam using the "Connect Camera" button
+- Connect a virtual camera using the "Connect Virtual Camera" button
+- Select camera source from the "Virtual Camera" dropdown
 
 Video Controls:
 - Play, pause, scrub, loop, and adjust volume
@@ -931,7 +935,19 @@ function startVideoUpdateLoop() {
 
 function updateCameraButton() {
   if (cameraController) {
-    cameraController.name(isCameraConnected ? '🔌 Disconnect Camera' : '📷 Connect Camera');
+    cameraController.name(isCameraConnected ? '🔌 Disconnect Virtual Camera' : '📷 Connect Virtual Camera');
+  }
+}
+
+function showCameraDropdown() {
+  if (cameraSelectController) {
+    cameraSelectController.show();
+  }
+}
+
+function hideCameraDropdown() {
+  if (cameraSelectController) {
+    cameraSelectController.hide();
   }
 }
 
